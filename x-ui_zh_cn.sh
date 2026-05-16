@@ -1162,8 +1162,8 @@ ssl_cert_issue_main() {
 }
 
 ssl_cert_issue_for_ip() {
-    LOGI "Starting automatic SSL certificate generation for server IP..."
-    LOGI "Using Let's Encrypt shortlived profile (~6 days validity, auto-renews)"
+    LOGI "正在启动服务器 IP 的自动 SSL 证书生成..."
+    LOGI "使用 Let's Encrypt shortlived 配置（约 6 天有效期，自动续期）"
 
     local existing_webBasePath=$(${xui_folder}/x-ui setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}')
     local existing_port=$(${xui_folder}/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
@@ -1242,7 +1242,7 @@ ssl_cert_issue_for_ip() {
             apk add socat curl openssl > /dev/null 2>&1
             ;;
         *)
-            LOGW "Unsupported OS for automatic socat installation"
+            LOGW "不支持的操作系统，无法自动安装 socat"
             ;;
     esac
 
@@ -1254,7 +1254,7 @@ ssl_cert_issue_for_ip() {
     local domain_args="-d ${server_ip}"
     if [[ -n "$ipv6_addr" ]] && is_ipv6 "$ipv6_addr"; then
         domain_args="${domain_args} -d ${ipv6_addr}"
-        LOGI "Including IPv6 address: ${ipv6_addr}"
+        LOGI "包含 IPv6 地址：${ipv6_addr}"
     fi
 
     # 选择 HTTP-01 监听器的端口（默认 80，允许覆盖）
@@ -1369,10 +1369,10 @@ ssl_cert_issue() {
     local existing_port=$(${xui_folder}/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}')
     # 首先检查 acme.sh
     if ! command -v ~/.acme.sh/acme.sh &> /dev/null; then
-        echo "acme.sh could not be found. we will install it"
+        echo "未找到 acme.sh，正在安装..."
         install_acme
         if [ $? -ne 0 ]; then
-            LOGE "install acme failed, please check logs"
+            LOGE "安装 acme.sh 失败，请检查日志"
             exit 1
         fi
     fi
@@ -1467,21 +1467,21 @@ ssl_cert_issue() {
         ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt --force
         ~/.acme.sh/acme.sh --issue -d ${domain} --listen-v6 --standalone --httpport ${WebPort} --force
         if [ $? -ne 0 ]; then
-            LOGE "Issuing certificate failed, please check logs."
+            LOGE "颁发证书失败，请检查日志"
             rm -rf ~/.acme.sh/${domain}
             exit 1
         else
-            LOGE "Issuing certificate succeeded, installing certificates..."
+            LOGI "证书颁发成功，正在安装证书..."
         fi
     else
-        LOGI "Using existing certificate, installing certificates..."
+        LOGI "使用现有证书，正在安装证书..."
     fi
 
     reloadCmd="x-ui restart"
 
-    LOGI "Default --reloadcmd for ACME is: ${yellow}x-ui restart"
-    LOGI "This command will run on every certificate issue and renew."
-    read -rp "Would you like to modify --reloadcmd for ACME? (y/n): " setReloadcmd
+    LOGI "ACME 的默认 --reloadcmd 为：${yellow}x-ui restart"
+    LOGI "此命令将在每次证书颁发和续期时运行。"
+    read -rp "您想修改 ACME 的 --reloadcmd 吗？(y/n): " setReloadcmd
     if [[ "$setReloadcmd" == "y" || "$setReloadcmd" == "Y" ]]; then
         echo -e "\n${green}\t1.${plain} 预设：systemctl reload nginx ; x-ui restart"
         echo -e "${green}\t2.${plain} 输入您自己的命令"
@@ -1630,15 +1630,15 @@ ssl_cert_issue_CF() {
 
         mkdir -p ${certPath}
         if [ $? -ne 0 ]; then
-            LOGE "Failed to create directory: ${certPath}"
+            LOGE "创建目录失败：${certPath}"
             exit 1
         fi
 
         reloadCmd="x-ui restart"
 
-        LOGI "Default --reloadcmd for ACME is: ${yellow}x-ui restart"
-        LOGI "This command will run on every certificate issue and renew."
-        read -rp "Would you like to modify --reloadcmd for ACME? (y/n): " setReloadcmd
+        LOGI "ACME 的默认 --reloadcmd 为：${yellow}x-ui restart"
+        LOGI "此命令将在每次证书颁发和续期时运行。"
+        read -rp "您想修改 ACME 的 --reloadcmd 吗？(y/n): " setReloadcmd
         if [[ "$setReloadcmd" == "y" || "$setReloadcmd" == "Y" ]]; then
             echo -e "\n${green}\t1.${plain} 预设：systemctl reload nginx ; x-ui restart"
             echo -e "${green}\t2.${plain} 输入您自己的命令"
@@ -1650,12 +1650,12 @@ ssl_cert_issue_CF() {
                     reloadCmd="systemctl reload nginx ; x-ui restart"
                     ;;
                 2)
-                    LOGD "It's recommended to put x-ui restart at the end, so it won't raise an error if other services fails"
-                    read -rp "Please enter your reloadcmd (example: systemctl reload nginx ; x-ui restart): " reloadCmd
-                    LOGI "Your reloadcmd is: ${reloadCmd}"
+                    LOGD "建议将 x-ui restart 放在最后，这样如果其他服务失败不会引发错误"
+                    read -rp "请输入您的 reloadcmd（例如：systemctl reload nginx ; x-ui restart）：" reloadCmd
+                    LOGI "您的 reloadcmd 为：${reloadCmd}"
                     ;;
                 *)
-                    LOGI "Keep default reloadcmd"
+                    LOGI "保持默认 reloadcmd"
                     ;;
             esac
         fi
@@ -1667,13 +1667,13 @@ ssl_cert_issue_CF() {
             LOGE "证书安装失败，脚本退出..."
             exit 1
         else
-            LOGI "证书安装成功，正在开启自动更新..."
+            LOGI "证书安装成功，正在开启自动续期..."
         fi
 
         # 启用自动更新
         ~/.acme.sh/acme.sh --upgrade --auto-upgrade
         if [ $? -ne 0 ]; then
-            LOGE "自动更新设置失败，脚本退出..."
+            LOGE "自动续期设置失败，脚本退出..."
             exit 1
         else
             LOGI "证书已安装并开启自动续期。具体信息如下："
@@ -2124,7 +2124,7 @@ protocol = tcp
 chain = INPUT
 EOF
 
-    echo -e "${green}Ip Limit jail files created with a bantime of ${bantime} minutes.${plain}"
+    echo -e "${green}IP 限制 jail 文件已创建，封禁时长为 ${bantime} 分钟。${plain}"
 }
 
 iplimit_remove_conflicts() {
@@ -2137,7 +2137,7 @@ iplimit_remove_conflicts() {
         # 检查 jail 文件中的 [3x-ipl] 配置并删除它
         if test -f "${file}" && grep -qw '3x-ipl' ${file}; then
             sed -i "/\[3x-ipl\]/,/^$/d" ${file}
-            echo -e "${yellow}Removing conflicts of [3x-ipl] in jail (${file})!${plain}\n"
+            echo -e "${yellow}正在删除 jail (${file}) 中 [3x-ipl] 的冲突配置！${plain}\n"
         fi
     done
 }
